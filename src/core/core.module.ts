@@ -36,8 +36,12 @@ import appConfig from '../config/app.config';
         host: configService.get<string>('app.redis.host'),
         port: configService.get<string>('app.redis.port'),
         password: configService.get<string>('app.redis.password'),
-        ttl: configService.get<string>('app.cache.ttl') ? Number(configService.get<string>('app.cache.ttl')) : undefined,
-        max: configService.get<string>('app.cache.max') ? Number(configService.get<string>('app.cache.max')) : undefined,
+        ttl: configService.get<string>('app.cache.ttl')
+          ? Number(configService.get<string>('app.cache.ttl'))
+          : undefined,
+        max: configService.get<string>('app.cache.max')
+          ? Number(configService.get<string>('app.cache.max'))
+          : undefined,
         isGlobal: true,
       }),
       inject: [ConfigService],

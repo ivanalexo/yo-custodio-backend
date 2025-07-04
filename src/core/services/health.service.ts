@@ -11,7 +11,7 @@ export class HealthService {
     private configService: ConfigService,
   ) {}
 
-getHealthStatus() {
+  getHealthStatus() {
     const mongoStatus = this.getMongoStatus();
     const appInfo = this.getAppInfo();
 

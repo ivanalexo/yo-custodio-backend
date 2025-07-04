@@ -45,7 +45,10 @@ async function bootstrap() {
   await app.listen(port);
 
   logger.log(`🚀 Servidor iniciado en puerto ${port}`, 'Bootstrap');
-  logger.log(`📚 Documentación disponible en http://localhost:${port}/api/docs`, 'Bootstrap');
+  logger.log(
+    `📚 Documentación disponible en http://localhost:${port}/api/docs`,
+    'Bootstrap',
+  );
   logger.log(`🏥 Health check en http://localhost:${port}/health`, 'Bootstrap');
 }
 
