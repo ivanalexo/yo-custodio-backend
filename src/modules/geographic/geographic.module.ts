@@ -4,7 +4,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 // Schemas
 import { Department, DepartmentSchema } from './schemas/department.schema';
 import { Province, ProvinceSchema } from './schemas/province.schema';
-import { Municipality, MunicipalitySchema } from './schemas/municipality';
+import {
+  Municipality,
+  MunicipalitySchema,
+} from './schemas/municipality.schema';
 import {
   ElectoralSeat,
   ElectoralSeatSchema,

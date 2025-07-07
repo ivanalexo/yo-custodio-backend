@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   NotFoundException,
@@ -57,8 +59,8 @@ export class ElectoralSeatService {
     },
   ) {
     const {
-      page,
-      limit,
+      page = 1,
+      limit = 10,
       sort,
       order,
       search,
@@ -85,7 +87,7 @@ export class ElectoralSeatService {
 
     // Si se filtra por provincia o departamento, encontrar los municipios correspondientes
     if ((provinceId || departmentId) && !municipalityId) {
-      let municipalities = [];
+      let municipalities: any[] = [];
       if (departmentId) {
         municipalities =
           await this.municipalityService.findByDepartment(departmentId);
@@ -93,7 +95,7 @@ export class ElectoralSeatService {
         municipalities =
           await this.municipalityService.findByProvince(provinceId);
       }
-      const municipalityIds = municipalities.map((m) => m._id);
+      const municipalityIds = municipalities.map((m: any) => m._id);
       filters.municipalityId = { $in: municipalityIds };
     }
 
@@ -112,7 +114,7 @@ export class ElectoralSeatService {
           },
           select: 'name provinceId',
         })
-        .sort({ [sort]: order === 'asc' ? 1 : -1 })
+        .sort({ [String(sort)]: order === 'asc' ? 1 : -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
@@ -192,7 +194,7 @@ export class ElectoralSeatService {
   async findByProvince(provinceId: string): Promise<ElectoralSeat[]> {
     const municipalities =
       await this.municipalityService.findByProvince(provinceId);
-    const municipalityIds = municipalities.map((m) => m._id);
+    const municipalityIds = municipalities.map((m: any) => m._id);
 
     return this.electoralSeatModel
       .find({ municipalityId: { $in: municipalityIds }, active: true })
@@ -204,7 +206,7 @@ export class ElectoralSeatService {
   async findByDepartment(departmentId: string): Promise<ElectoralSeat[]> {
     const municipalities =
       await this.municipalityService.findByDepartment(departmentId);
-    const municipalityIds = municipalities.map((m) => m._id);
+    const municipalityIds = municipalities.map((m: any) => m._id);
 
     return this.electoralSeatModel
       .find({ municipalityId: { $in: municipalityIds }, active: true })

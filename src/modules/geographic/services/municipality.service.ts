@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   NotFoundException,
@@ -50,8 +53,8 @@ export class MunicipalityService {
     query: GeographicQueryDto & { provinceId?: string; departmentId?: string },
   ) {
     const {
-      page,
-      limit,
+      page = 1,
+      limit = 10,
       sort,
       order,
       search,
@@ -76,7 +79,9 @@ export class MunicipalityService {
     if (departmentId && !provinceId) {
       const provinces =
         await this.provinceService.findByDepartment(departmentId);
-      const provinceIds = provinces.map((p) => p._id);
+      const provinceIds = provinces.map(
+        (p: any) => p._id?.toString?.() ?? p.id,
+      );
       filters.provinceId = { $in: provinceIds };
     }
 
@@ -91,7 +96,7 @@ export class MunicipalityService {
           },
           select: 'name departmentId',
         })
-        .sort({ [sort]: order === 'asc' ? 1 : -1 })
+        .sort({ [String(sort)]: order === 'asc' ? 1 : -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
@@ -139,7 +144,7 @@ export class MunicipalityService {
 
   async findByDepartment(departmentId: string): Promise<Municipality[]> {
     const provinces = await this.provinceService.findByDepartment(departmentId);
-    const provinceIds = provinces.map((p) => p._id);
+    const provinceIds = provinces.map((p: any) => p._id?.toString?.() ?? p.id);
 
     return this.municipalityModel
       .find({ provinceId: { $in: provinceIds }, active: true })
@@ -255,4 +260,3 @@ export class MunicipalityService {
     };
   }
 }
-elel;

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   NotFoundException,
@@ -53,8 +55,8 @@ export class ElectoralLocationService {
 
   async findAll(query: LocationQueryDto) {
     const {
-      page,
-      limit,
+      page = 1,
+      limit = 10,
       sort,
       order,
       search,
@@ -101,7 +103,7 @@ export class ElectoralLocationService {
           },
           select: 'name municipalityId',
         })
-        .sort({ [sort]: order === 'asc' ? 1 : -1 })
+        .sort({ [String(sort)]: order === 'asc' ? 1 : -1 })
         .skip(skip)
         .limit(limit)
         .exec(),

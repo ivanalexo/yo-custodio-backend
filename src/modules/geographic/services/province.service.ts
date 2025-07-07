@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   NotFoundException,
@@ -40,7 +41,15 @@ export class ProvinceService {
   }
 
   async findAll(query: GeographicQueryDto & { departmentId?: string }) {
-    const { page, limit, sort, order, search, active, departmentId } = query;
+    const {
+      page = 1,
+      limit = 10,
+      sort,
+      order,
+      search,
+      active,
+      departmentId,
+    } = query;
     const skip = (page - 1) * limit;
 
     const filters: any = {};
@@ -58,7 +67,7 @@ export class ProvinceService {
       this.provinceModel
         .find(filters)
         .populate('departmentId', 'name')
-        .sort({ [sort]: order === 'asc' ? 1 : -1 })
+        .sort({ [String(sort)]: order === 'asc' ? 1 : -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
