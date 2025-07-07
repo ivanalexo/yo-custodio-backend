@@ -7,4 +7,4 @@ RUN npm ci --only=development
 
 COPY . .
 
-USER node
+CMD ["npm", "run", "start:dev"]
