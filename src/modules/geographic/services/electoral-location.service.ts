@@ -184,22 +184,148 @@ export class ElectoralLocationService {
     longitude: number,
     maxDistance: number = 1000,
   ) {
-    return this.locationModel
-      .find({
-        coordinates: {
-          $near: {
-            $geometry: {
+    try {
+      const results = await this.locationModel.aggregate([
+        {
+          $addFields: {
+            location: {
+              type: 'Point',
+              coordinates: ['$coordinates.longitude', '$coordinates.latitude'],
+            },
+          },
+        },
+        {
+          $geoNear: {
+            near: {
               type: 'Point',
               coordinates: [longitude, latitude],
             },
-            $maxDistance: maxDistance,
+            distanceField: 'distance',
+            maxDistance: maxDistance,
+            query: { active: true },
+            spherical: true,
           },
         },
-        active: true,
-      })
-      .populate('electoralSeatId', 'name')
-      .limit(10)
-      .exec();
+        {
+          $lookup: {
+            from: 'electoral_seats',
+            localField: 'electoralSeatId',
+            foreignField: '_id',
+            as: 'electoralSeat',
+          },
+        },
+        {
+          $unwind: {
+            path: '$electoralSeat',
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+        {
+          $lookup: {
+            from: 'municipalities',
+            localField: 'electoralSeat.municipalityId',
+            foreignField: '_id',
+            as: 'municipality',
+          },
+        },
+        {
+          $unwind: {
+            path: '$municipality',
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+        {
+          $lookup: {
+            from: 'provinces',
+            localField: 'municipality.provinceId',
+            foreignField: '_id',
+            as: 'province',
+          },
+        },
+        {
+          $unwind: {
+            path: '$province',
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+        {
+          $lookup: {
+            from: 'departments',
+            localField: 'province.departmentId',
+            foreignField: '_id',
+            as: 'department',
+          },
+        },
+        {
+          $unwind: {
+            path: '$department',
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            fid: 1,
+            code: 1,
+            name: 1,
+            address: 1,
+            district: 1,
+            zone: 1,
+            coordinates: 1,
+            circunscripcion: 1,
+            active: 1,
+            distance: {
+              $round: ['$distance', 0],
+            },
+            electoralSeat: {
+              _id: '$electoralSeat._id',
+              name: '$electoralSeat.name',
+              municipality: {
+                _id: '$municipality._id',
+                name: '$municipality.name',
+                province: {
+                  _id: '$province._id',
+                  name: '$province.name',
+                  department: {
+                    _id: '$department._id',
+                    name: '$department.name',
+                  },
+                },
+              },
+            },
+            location: 0,
+            municipality: 0,
+            province: 0,
+            department: 0,
+          },
+        },
+        {
+          $limit: 10,
+        },
+      ]);
+      this.logger.log(
+        `Búsqueda de recintos electorales cercanos a lat: ${latitude}, lon: ${longitude}, distancia máxima: ${maxDistance}m`,
+      );
+
+      return {
+        data: results,
+        query: {
+          latitude,
+          longitude,
+          maxDistance,
+          unit: 'meters',
+        },
+        count: results.length,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error al buscar recintos electorales cercanos: ${error.message}`,
+        error.stack,
+      );
+      throw new NotFoundException(
+        `No se pudieron encontrar recintos electorales cercanos a las coordenadas proporcionadas`,
+      );
+    }
   }
 
   async findByCircunscripcion(
