@@ -32,7 +32,7 @@ export class ElectoralLocation {
   @Prop({ required: true, trim: true })
   fid: string; // "4144", "4145" identificador del sistema original
 
-  @Prop({ required: true, unique: true, trim: true })
+  @Prop({ required: true, trim: true })
   code: string; // "25527", "32319" (campo Reci)
 
   @Prop({ required: true, trim: true })
@@ -66,7 +66,7 @@ export class ElectoralLocation {
 export const ElectoralLocationSchema =
   SchemaFactory.createForClass(ElectoralLocation);
 
-ElectoralLocationSchema.index({ code: 1 }, { unique: true });
+//ElectoralLocationSchema.index({ code: 1 }, { unique: true });
 ElectoralLocationSchema.index({ electoralSeatId: 1 });
 ElectoralLocationSchema.index({ fid: 1 });
 ElectoralLocationSchema.index({ 'circunscripcion.type': 1 });

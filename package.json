@@ -17,7 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "import:data": "npx ts-node ./src/scripts/import-electoral-data.ts"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.0.1",
@@ -35,6 +36,7 @@
     "cache-manager-redis-store": "^3.0.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "dotenv": "^17.1.0",
     "mongoose": "^8.16.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
