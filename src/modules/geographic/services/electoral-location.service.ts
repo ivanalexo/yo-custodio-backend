@@ -187,14 +187,6 @@ export class ElectoralLocationService {
     try {
       const results = await this.locationModel.aggregate([
         {
-          $addFields: {
-            location: {
-              type: 'Point',
-              coordinates: ['$coordinates.longitude', '$coordinates.latitude'],
-            },
-          },
-        },
-        {
           $geoNear: {
             near: {
               type: 'Point',
@@ -204,6 +196,7 @@ export class ElectoralLocationService {
             maxDistance: maxDistance,
             query: { active: true },
             spherical: true,
+            distanceMultiplier: 1,
           },
         },
         {
@@ -299,6 +292,7 @@ export class ElectoralLocationService {
           $limit: 10,
         },
       ]);
+
       this.logger.log(
         `Búsqueda de recintos electorales cercanos a lat: ${latitude}, lon: ${longitude}, distancia máxima: ${maxDistance}m`,
       );
