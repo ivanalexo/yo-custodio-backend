@@ -293,10 +293,6 @@ export class ElectoralLocationService {
                 },
               },
             },
-            location: 0,
-            municipality: 0,
-            province: 0,
-            department: 0,
           },
         },
         {
