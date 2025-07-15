@@ -77,7 +77,7 @@ export class DepartmentService {
     };
   }
 
-  async findOne(id: string): Promise<Department> {
+  async findOne(id: string): Promise<DepartmentDocument> {
     const department = await this.departmentModel.findById(id).exec();
     if (!department) {
       throw new NotFoundException(`Departamento con ID ${id} no encontrado`);

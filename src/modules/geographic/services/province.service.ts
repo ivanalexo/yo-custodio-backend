@@ -85,7 +85,7 @@ export class ProvinceService {
     };
   }
 
-  async findOne(id: string): Promise<Province> {
+  async findOne(id: string): Promise<ProvinceDocument> {
     const province = await this.provinceModel
       .findById(id)
       .populate('departmentId', 'name')
@@ -98,10 +98,10 @@ export class ProvinceService {
   }
 
   async findByDepartment(departmentId: string): Promise<Province[]> {
-    await this.departmentService.findOne(departmentId);
+    const response = await this.departmentService.findOne(departmentId);
 
     return this.provinceModel
-      .find({ departmentId, active: true })
+      .find({ departmentId: response._id, active: true })
       .sort({ name: 1 })
       .exec();
   }

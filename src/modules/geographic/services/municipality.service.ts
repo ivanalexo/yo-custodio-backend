@@ -114,7 +114,7 @@ export class MunicipalityService {
     };
   }
 
-  async findOne(id: string): Promise<Municipality> {
+  async findOne(id: string): Promise<MunicipalityDocument> {
     const municipality = await this.municipalityModel
       .findById(id)
       .populate({
@@ -134,17 +134,17 @@ export class MunicipalityService {
   }
 
   async findByProvince(provinceId: string): Promise<Municipality[]> {
-    await this.provinceService.findOne(provinceId);
+    const response = await this.provinceService.findOne(provinceId);
 
     return this.municipalityModel
-      .find({ provinceId, active: true })
+      .find({ provinceId: response._id, active: true })
       .sort({ name: 1 })
       .exec();
   }
 
   async findByDepartment(departmentId: string): Promise<Municipality[]> {
     const provinces = await this.provinceService.findByDepartment(departmentId);
-    const provinceIds = provinces.map((p: any) => p._id?.toString?.() ?? p.id);
+    const provinceIds = provinces.map((p: any) => p._id ?? p.id);
 
     return this.municipalityModel
       .find({ provinceId: { $in: provinceIds }, active: true })

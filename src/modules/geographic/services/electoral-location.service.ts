@@ -186,26 +186,82 @@ export class ElectoralLocationService {
   ) {
     try {
       const results = await this.locationModel.aggregate([
+        // Filtro base: solo recintos activos
+        {
+          $match: {
+            active: true,
+          },
+        },
+        // Agregar campo de distancia calculada usando aproximación equirectangular
+        // Suficientemente precisa para distancias cortas (< 50km)
         {
           $addFields: {
-            location: {
-              type: 'Point',
-              coordinates: ['$coordinates.longitude', '$coordinates.latitude'],
+            distance: {
+              $multiply: [
+                111320, // Metros por grado aproximado
+                {
+                  $sqrt: {
+                    $add: [
+                      // (lat2 - lat1)²
+                      {
+                        $pow: [
+                          {
+                            $subtract: [latitude, '$coordinates.latitude'],
+                          },
+                          2,
+                        ],
+                      },
+                      // ((lng2 - lng1) * cos((lat1 + lat2) / 2))²
+                      {
+                        $pow: [
+                          {
+                            $multiply: [
+                              {
+                                $subtract: [
+                                  longitude,
+                                  '$coordinates.longitude',
+                                ],
+                              },
+                              {
+                                $cos: {
+                                  $degreesToRadians: {
+                                    $divide: [
+                                      {
+                                        $add: [
+                                          latitude,
+                                          '$coordinates.latitude',
+                                        ],
+                                      },
+                                      2,
+                                    ],
+                                  },
+                                },
+                              },
+                            ],
+                          },
+                          2,
+                        ],
+                      },
+                    ],
+                  },
+                },
+              ],
             },
           },
         },
+        // Filtrar por distancia máxima
         {
-          $geoNear: {
-            near: {
-              type: 'Point',
-              coordinates: [longitude, latitude],
-            },
-            distanceField: 'distance',
-            maxDistance: maxDistance,
-            query: { active: true },
-            spherical: true,
+          $match: {
+            distance: { $lte: maxDistance },
           },
         },
+        // Ordenar por distancia (más cercano primero)
+        {
+          $sort: {
+            distance: 1,
+          },
+        },
+        // Lookup para obtener información del asiento electoral
         {
           $lookup: {
             from: 'electoral_seats',
@@ -220,6 +276,7 @@ export class ElectoralLocationService {
             preserveNullAndEmptyArrays: false,
           },
         },
+        // Lookup anidado para municipio
         {
           $lookup: {
             from: 'municipalities',
@@ -234,6 +291,7 @@ export class ElectoralLocationService {
             preserveNullAndEmptyArrays: false,
           },
         },
+        // Lookup anidado para provincia
         {
           $lookup: {
             from: 'provinces',
@@ -248,6 +306,7 @@ export class ElectoralLocationService {
             preserveNullAndEmptyArrays: false,
           },
         },
+        // Lookup anidado para departamento
         {
           $lookup: {
             from: 'departments',
@@ -262,6 +321,7 @@ export class ElectoralLocationService {
             preserveNullAndEmptyArrays: false,
           },
         },
+        // Proyección final - estructurar la respuesta
         {
           $project: {
             _id: 1,
@@ -275,7 +335,7 @@ export class ElectoralLocationService {
             circunscripcion: 1,
             active: 1,
             distance: {
-              $round: ['$distance', 0],
+              $round: ['$distance', 0], // Redondear distancia a metros enteros
             },
             electoralSeat: {
               _id: '$electoralSeat._id',
@@ -293,18 +353,17 @@ export class ElectoralLocationService {
                 },
               },
             },
-            location: 0,
-            municipality: 0,
-            province: 0,
-            department: 0,
           },
         },
+        // Limitar resultados
         {
           $limit: 10,
         },
       ]);
+
       this.logger.log(
-        `Búsqueda de recintos electorales cercanos a lat: ${latitude}, lon: ${longitude}, distancia máxima: ${maxDistance}m`,
+        `Búsqueda de recintos cercanos: lat=${latitude}, lng=${longitude}, maxDistance=${maxDistance}m, encontrados=${results.length}`,
+        'ElectoralLocationService',
       );
 
       return {
@@ -319,12 +378,10 @@ export class ElectoralLocationService {
       };
     } catch (error) {
       this.logger.error(
-        `Error al buscar recintos electorales cercanos: ${error.message}`,
-        error.stack,
+        `Error en búsqueda geoespacial: ${error.message}`,
+        'ElectoralLocationService',
       );
-      throw new NotFoundException(
-        `No se pudieron encontrar recintos electorales cercanos a las coordenadas proporcionadas`,
-      );
+      throw error;
     }
   }
 

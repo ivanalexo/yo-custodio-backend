@@ -183,10 +183,10 @@ export class ElectoralSeatService {
   }
 
   async findByMunicipality(municipalityId: string): Promise<ElectoralSeat[]> {
-    await this.municipalityService.findOne(municipalityId);
+    const response = await this.municipalityService.findOne(municipalityId);
 
     return this.electoralSeatModel
-      .find({ municipalityId, active: true })
+      .find({ municipalityId: response._id, active: true })
       .sort({ name: 1 })
       .exec();
   }
