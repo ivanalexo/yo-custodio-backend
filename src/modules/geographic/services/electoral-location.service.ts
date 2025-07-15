@@ -195,64 +195,16 @@ export class ElectoralLocationService {
         // Agregar campo de distancia calculada usando aproximación equirectangular
         // Suficientemente precisa para distancias cortas (< 50km)
         {
-          $addFields: {
-            distance: {
-              $multiply: [
-                111320, // Metros por grado aproximado
-                {
-                  $sqrt: {
-                    $add: [
-                      // (lat2 - lat1)²
-                      {
-                        $pow: [
-                          {
-                            $subtract: [latitude, '$coordinates.latitude'],
-                          },
-                          2,
-                        ],
-                      },
-                      // ((lng2 - lng1) * cos((lat1 + lat2) / 2))²
-                      {
-                        $pow: [
-                          {
-                            $multiply: [
-                              {
-                                $subtract: [
-                                  longitude,
-                                  '$coordinates.longitude',
-                                ],
-                              },
-                              {
-                                $cos: {
-                                  $degreesToRadians: {
-                                    $divide: [
-                                      {
-                                        $add: [
-                                          latitude,
-                                          '$coordinates.latitude',
-                                        ],
-                                      },
-                                      2,
-                                    ],
-                                  },
-                                },
-                              },
-                            ],
-                          },
-                          2,
-                        ],
-                      },
-                    ],
-                  },
-                },
-              ],
+          $geoNear: {
+            near: {
+              type: 'Point',
+              coordinates: [latitude, longitude],
             },
-          },
-        },
-        // Filtrar por distancia máxima
-        {
-          $match: {
-            distance: { $lte: maxDistance },
+            distanceField: 'distance',
+            maxDistance: maxDistance,
+            query: { active: true },
+            spherical: true,
+            distanceMultiplier: 1,
           },
         },
         // Ordenar por distancia (más cercano primero)
