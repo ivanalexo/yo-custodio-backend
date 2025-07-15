@@ -161,7 +161,7 @@ export class ElectoralLocationService {
     const location = await this.findOne(id);
     const tables = await this.electoralTableModel
       .find({
-        electoralLocationId: location._id,
+        electoralLocationId: location.id,
         active: true,
       })
       .sort({ tableNumber: 1 })
@@ -232,6 +232,33 @@ export class ElectoralLocationService {
           },
         },
         {
+          $lookup: {
+            from: 'electoral_tables',
+            let: { locationId: { $toString: '$_id' } },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$electoralLocationId', '$$locationId'] },
+                      { $eq: ['$active', true] },
+                    ],
+                  },
+                },
+              },
+              { $sort: { tableNumber: 1 } },
+              {
+                $project: {
+                  tableNumber: 1,
+                  tableCode: 1,
+                  _id: 1,
+                },
+              },
+            ],
+            as: 'tables',
+          },
+        },
+        {
           $unwind: {
             path: '$electoralSeat',
             preserveNullAndEmptyArrays: false,
@@ -277,19 +304,6 @@ export class ElectoralLocationService {
           $unwind: {
             path: '$department',
             preserveNullAndEmptyArrays: false,
-          },
-        },
-        {
-          $lookup: {
-            from: 'electoral_tables',
-            localField: '_id',
-            foreignField: 'electoralLocationId',
-            as: 'tables',
-            pipeline: [
-              { $match: { active: true } },
-              { $sort: { tableNumber: 1 } },
-              { $project: { tableNumber: 1, tableCode: 1, _id: 1 } },
-            ],
           },
         },
         {
