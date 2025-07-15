@@ -15,6 +15,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { ElectoralLocationService } from '../services/electoral-location.service';
 import {
@@ -108,6 +109,26 @@ export class ElectoralLocationController {
   @ApiResponse({ status: 404, description: 'Recinto no encontrado' })
   findByCode(@Param('code') code: string) {
     return this.locationService.findByCode(code);
+  }
+
+  @Get(':id/tables')
+  @ApiOperation({
+    summary: 'Obtener un recinto electoral con sus mesas',
+    description:
+      'Retorna los datos del recinto incluyendo todas sus mesas electorales',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID del recinto electoral',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Recinto encontrado con sus mesas electorales',
+  })
+  @ApiResponse({ status: 404, description: 'Recinto no encontrado' })
+  findOneWithTables(@Param('id') id: string) {
+    return this.locationService.findOneWithTables(id);
   }
 
   @Get(':id')
