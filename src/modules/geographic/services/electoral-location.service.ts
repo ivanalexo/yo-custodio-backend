@@ -186,14 +186,6 @@ export class ElectoralLocationService {
   ) {
     try {
       const results = await this.locationModel.aggregate([
-        // Filtro base: solo recintos activos
-        {
-          $match: {
-            active: true,
-          },
-        },
-        // Agregar campo de distancia calculada usando aproximación equirectangular
-        // Suficientemente precisa para distancias cortas (< 50km)
         {
           $geoNear: {
             near: {
@@ -207,13 +199,6 @@ export class ElectoralLocationService {
             distanceMultiplier: 1,
           },
         },
-        // Ordenar por distancia (más cercano primero)
-        {
-          $sort: {
-            distance: 1,
-          },
-        },
-        // Lookup para obtener información del asiento electoral
         {
           $lookup: {
             from: 'electoral_seats',
@@ -228,7 +213,6 @@ export class ElectoralLocationService {
             preserveNullAndEmptyArrays: false,
           },
         },
-        // Lookup anidado para municipio
         {
           $lookup: {
             from: 'municipalities',
@@ -243,7 +227,6 @@ export class ElectoralLocationService {
             preserveNullAndEmptyArrays: false,
           },
         },
-        // Lookup anidado para provincia
         {
           $lookup: {
             from: 'provinces',
@@ -258,7 +241,6 @@ export class ElectoralLocationService {
             preserveNullAndEmptyArrays: false,
           },
         },
-        // Lookup anidado para departamento
         {
           $lookup: {
             from: 'departments',
@@ -273,7 +255,6 @@ export class ElectoralLocationService {
             preserveNullAndEmptyArrays: false,
           },
         },
-        // Proyección final - estructurar la respuesta
         {
           $project: {
             _id: 1,
@@ -287,7 +268,7 @@ export class ElectoralLocationService {
             circunscripcion: 1,
             active: 1,
             distance: {
-              $round: ['$distance', 0], // Redondear distancia a metros enteros
+              $round: ['$distance', 0],
             },
             electoralSeat: {
               _id: '$electoralSeat._id',
@@ -307,7 +288,6 @@ export class ElectoralLocationService {
             },
           },
         },
-        // Limitar resultados
         {
           $limit: 10,
         },
