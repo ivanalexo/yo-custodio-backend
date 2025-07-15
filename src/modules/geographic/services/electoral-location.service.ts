@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
@@ -18,12 +19,18 @@ import {
 import { LocationQueryDto } from '../dto/query.dto';
 import { ElectoralSeatService } from './electoral-seat.service';
 import { LoggerService } from '../../../core/services/logger.service';
+import {
+  ElectoralTable,
+  ElectoralTableDocument,
+} from '../schemas/electoral-table.schema';
 
 @Injectable()
 export class ElectoralLocationService {
   constructor(
     @InjectModel(ElectoralLocation.name)
     private locationModel: Model<ElectoralLocationDocument>,
+    @InjectModel(ElectoralTable.name)
+    private electoralTableModel: Model<ElectoralTableDocument>,
     private electoralSeatService: ElectoralSeatService,
     private logger: LoggerService,
   ) {}
@@ -121,7 +128,7 @@ export class ElectoralLocationService {
     };
   }
 
-  async findOne(id: string): Promise<ElectoralLocation> {
+  async findOne(id: string): Promise<ElectoralLocationDocument> {
     const location = await this.locationModel
       .findById(id)
       .populate({
@@ -148,6 +155,23 @@ export class ElectoralLocationService {
       );
     }
     return location;
+  }
+
+  async findOneWithTables(id: string) {
+    const location = await this.findOne(id);
+    const tables = await this.electoralTableModel
+      .find({
+        electoralLocationId: location._id,
+        active: true,
+      })
+      .sort({ tableNumber: 1 })
+      .exec();
+
+    return {
+      ...location.toObject(),
+      tables,
+      tablesCount: tables.length,
+    };
   }
 
   async findByCode(code: string): Promise<ElectoralLocation> {
@@ -256,6 +280,19 @@ export class ElectoralLocationService {
           },
         },
         {
+          $lookup: {
+            from: 'electoral_tables',
+            localField: '_id',
+            foreignField: 'electoralLocationId',
+            as: 'tables',
+            pipeline: [
+              { $match: { active: true } },
+              { $sort: { tableNumber: 1 } },
+              { $project: { tableNumber: 1, tableCode: 1, _id: 1 } },
+            ],
+          },
+        },
+        {
           $project: {
             _id: 1,
             fid: 1,
@@ -286,6 +323,8 @@ export class ElectoralLocationService {
                 },
               },
             },
+            tables: 1,
+            tableCount: { $size: '$tables' },
           },
         },
         {
