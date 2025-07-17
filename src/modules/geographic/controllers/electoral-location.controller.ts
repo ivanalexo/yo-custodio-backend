@@ -111,6 +111,14 @@ export class ElectoralLocationController {
     return this.locationService.findByCode(code);
   }
 
+  @Get('by-electoral-seat/:electoralSeatId')
+  @ApiOperation({ summary: 'Obtener recintos por asiento electoral' })
+  @ApiResponse({ status: 200, description: 'Recintos encontrados' })
+  @ApiResponse({ status: 404, description: 'Asiento electoral no encontrado' })
+  findByElectoralSeat(@Param('electoralSeatId') electoralSeatId: string) {
+    return this.locationService.findByElectoralSeat(electoralSeatId);
+  }
+
   @Get(':id/tables')
   @ApiOperation({
     summary: 'Obtener un recinto electoral con sus mesas',

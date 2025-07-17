@@ -22,7 +22,8 @@ export default registerAs('app', () => ({
   // Blockchain configuration
   // CORS
   cors: {
-    origins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+    // origins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origins: '*', // Allow all domains
   },
   cache: {
     ttl: parseInt(process.env.CACHE_TTL || '300', 10), // 4 minutos

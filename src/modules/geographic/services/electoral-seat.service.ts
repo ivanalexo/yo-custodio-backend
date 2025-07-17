@@ -132,7 +132,7 @@ export class ElectoralSeatService {
     };
   }
 
-  async findOne(id: string): Promise<ElectoralSeat> {
+  async findOne(id: string): Promise<ElectoralSeatDocument> {
     const electoralSeat = await this.electoralSeatModel
       .findById(id)
       .populate({
