@@ -386,6 +386,20 @@ export class ElectoralLocationService {
       .exec();
   }
 
+  async findByElectoralSeat(
+    electoralSeatId: string,
+  ): Promise<ElectoralLocation[]> {
+    const response = await this.electoralSeatService.findOne(electoralSeatId);
+
+    return this.locationModel
+      .find({
+        electoralSeatId: response._id,
+        active: true,
+      })
+      .sort({ name: 1 })
+      .exec();
+  }
+
   async update(
     id: string,
     updateDto: UpdateElectoralLocationDto,
