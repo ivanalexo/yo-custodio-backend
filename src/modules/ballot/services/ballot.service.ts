@@ -8,7 +8,6 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -24,7 +23,6 @@ import { ElectoralLocationService } from '../../geographic/services/electoral-lo
 import { ElectoralTableService } from '../../geographic/services/electoral-table.service';
 import { PoliticalPartyService } from '../../political/services/political-party.service';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class BallotService {
@@ -33,7 +31,6 @@ export class BallotService {
     private electoralLocationService: ElectoralLocationService,
     private electoralTableService: ElectoralTableService,
     private politicalPartyService: PoliticalPartyService,
-    private readonly httpService: HttpService,
   ) {}
 
   async createFromIpfs(createDto: CreateBallotFromIpfsDto): Promise<Ballot> {
@@ -78,14 +75,8 @@ export class BallotService {
 
   private async fetchFromIpfs(ipfsUri: string): Promise<OpenSeaMetadata> {
     try {
-      //   const response = await firstValueFrom(
-      //     this.httpService.get(ipfsUri, {
-      //       timeout: 30000, // 30 segundos timeout
-      //     }),
-      //   );
       const response = await fetch(ipfsUri);
       const data = await response.json();
-      console.log(data);
       return data as unknown as OpenSeaMetadata;
     } catch (error) {
       console.log('Error al obtener datos de IPFS:', error);
@@ -333,7 +324,7 @@ export class BallotService {
 
     // 2. Buscar todas las actas de ese recinto
     const ballots = await this.ballotModel
-      .find({ electoralLocationId: nearestLocation._id })
+      .find({ electoralLocationId: nearestLocation._id.toString() })
       .sort({ tableNumber: 1 })
       .exec();
 

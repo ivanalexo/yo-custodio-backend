@@ -239,10 +239,7 @@ export class ElectoralLocationService {
               {
                 $match: {
                   $expr: {
-                    $and: [
-                      { $eq: ['$electoralLocationId', '$$locationId'] },
-                      { $eq: ['$active', true] },
-                    ],
+                    $and: [{ $eq: ['$electoralLocationId', '$$locationId'] }],
                   },
                 },
               },
@@ -256,6 +253,30 @@ export class ElectoralLocationService {
               },
             ],
             as: 'tables',
+          },
+        },
+        {
+          $lookup: {
+            from: 'ballots',
+            let: { locationId: { $toString: '$_id' } },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [{ $eq: ['$electoralLocationId', '$$locationId'] }],
+                  },
+                },
+              },
+              { $sort: { tableNumber: 1 } },
+              {
+                $project: {
+                  tableNumber: 1,
+                  tableCode: 1,
+                  _id: 1,
+                },
+              },
+            ],
+            as: 'ballots',
           },
         },
         {
@@ -338,6 +359,7 @@ export class ElectoralLocationService {
               },
             },
             tables: 1,
+            ballots: 1,
             tableCount: { $size: '$tables' },
           },
         },
@@ -541,7 +563,7 @@ export class ElectoralLocationService {
           $geoNear: {
             near: {
               type: 'Point',
-              coordinates: [longitude, latitude], // MongoDB usa [lng, lat]
+              coordinates: [latitude, longitude], // MongoDB usa [lng, lat]
             },
             distanceField: 'distance',
             maxDistance: maxDistance,

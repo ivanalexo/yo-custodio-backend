@@ -14,12 +14,15 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
 import { BallotService } from '../services/ballot.service';
 import {
   CreateBallotFromIpfsDto,
   BallotQueryDto,
   BallotStatsDto,
+  NearbyLocationResponseDto,
+  LocationByCoordinatesDto,
 } from '../dto/ballot.dto';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 
@@ -111,5 +114,29 @@ export class BallotController {
   })
   findByTableCode(@Param('tableCode') tableCode: string) {
     return this.ballotService.findByTableCode(tableCode);
+  }
+
+  @Post('by-location')
+  @ApiOperation({
+    summary: 'Obtener actas del recinto más cercano',
+    description:
+      'Busca el recinto electoral más cercano a las coordenadas proporcionadas y retorna todas las actas de ese recinto',
+  })
+  @ApiBody({ type: LocationByCoordinatesDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Actas del recinto más cercano obtenidas exitosamente',
+    type: NearbyLocationResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No se encontró ningún recinto electoral cercano',
+  })
+  findByNearestLocation(@Body() locationDto: LocationByCoordinatesDto) {
+    return this.ballotService.findByNearestLocation(
+      locationDto.latitude,
+      locationDto.longitude,
+      locationDto.maxDistance,
+    );
   }
 }
