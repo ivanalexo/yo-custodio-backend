@@ -7,7 +7,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   ElectoralTable,
   ElectoralTableDocument,
@@ -331,5 +331,18 @@ export class ElectoralTableService {
       },
       timestamp: new Date().toISOString(),
     };
+  }
+
+  async countTotal(): Promise<number> {
+    return this.electoralTableModel.countDocuments({ active: true }).exec();
+  }
+
+  async countByLocation(electoralLocationId: string): Promise<number> {
+    return this.electoralTableModel
+      .countDocuments({
+        electoralLocationId: new Types.ObjectId(electoralLocationId),
+        active: true,
+      })
+      .exec();
   }
 }

@@ -7,7 +7,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   ElectoralLocation,
   ElectoralLocationDocument,
@@ -239,10 +239,7 @@ export class ElectoralLocationService {
               {
                 $match: {
                   $expr: {
-                    $and: [
-                      { $eq: ['$electoralLocationId', '$$locationId'] },
-                      { $eq: ['$active', true] },
-                    ],
+                    $and: [{ $eq: ['$electoralLocationId', '$$locationId'] }],
                   },
                 },
               },
@@ -256,6 +253,30 @@ export class ElectoralLocationService {
               },
             ],
             as: 'tables',
+          },
+        },
+        {
+          $lookup: {
+            from: 'ballots',
+            let: { locationId: { $toString: '$_id' } },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [{ $eq: ['$electoralLocationId', '$$locationId'] }],
+                  },
+                },
+              },
+              { $sort: { tableNumber: 1 } },
+              {
+                $project: {
+                  tableNumber: 1,
+                  tableCode: 1,
+                  _id: 1,
+                },
+              },
+            ],
+            as: 'ballots',
           },
         },
         {
@@ -338,6 +359,7 @@ export class ElectoralLocationService {
               },
             },
             tables: 1,
+            ballots: 1,
             tableCount: { $size: '$tables' },
           },
         },
@@ -478,5 +500,85 @@ export class ElectoralLocationService {
       byType: stats,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  async findOneWithHierarchy(id: string): Promise<any> {
+    const result = await this.locationModel
+      .aggregate([
+        { $match: { _id: new Types.ObjectId(id) } },
+        {
+          $lookup: {
+            from: 'electoral_seats',
+            localField: 'electoralSeatId',
+            foreignField: '_id',
+            as: 'electoralSeat',
+          },
+        },
+        { $unwind: '$electoralSeat' },
+        {
+          $lookup: {
+            from: 'municipalities',
+            localField: 'electoralSeat.municipalityId',
+            foreignField: '_id',
+            as: 'municipality',
+          },
+        },
+        { $unwind: '$municipality' },
+        {
+          $lookup: {
+            from: 'provinces',
+            localField: 'municipality.provinceId',
+            foreignField: '_id',
+            as: 'province',
+          },
+        },
+        { $unwind: '$province' },
+        {
+          $lookup: {
+            from: 'departments',
+            localField: 'province.departmentId',
+            foreignField: '_id',
+            as: 'department',
+          },
+        },
+        { $unwind: '$department' },
+      ])
+      .exec();
+
+    if (!result || result.length === 0) {
+      throw new NotFoundException('Recinto electoral no encontrado');
+    }
+
+    return result[0];
+  }
+
+  async findNearestLocation(
+    latitude: number,
+    longitude: number,
+    maxDistance: number = 5000,
+  ): Promise<any> {
+    const result = await this.locationModel
+      .aggregate([
+        {
+          $geoNear: {
+            near: {
+              type: 'Point',
+              coordinates: [latitude, longitude], // MongoDB usa [lng, lat]
+            },
+            distanceField: 'distance',
+            maxDistance: maxDistance,
+            spherical: true,
+            query: { active: true },
+          },
+        },
+        { $limit: 1 },
+      ])
+      .exec();
+
+    if (!result || result.length === 0) {
+      return null;
+    }
+
+    return result[0];
   }
 }
