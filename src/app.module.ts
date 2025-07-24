@@ -4,9 +4,10 @@ import { AppService } from './app.service';
 import { CoreModule } from './core/core.module';
 import { GeographicModule } from './modules/geographic/geographic.module';
 import { PoliticalModule } from './modules/political/political.module';
+import { BallotModule } from './modules/ballot/ballot.module';
 
 @Module({
-  imports: [CoreModule, GeographicModule, PoliticalModule],
+  imports: [CoreModule, GeographicModule, PoliticalModule, BallotModule],
   controllers: [AppController],
   providers: [AppService],
 })
