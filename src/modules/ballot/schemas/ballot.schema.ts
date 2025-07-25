@@ -43,8 +43,9 @@ export class PartyVote {
   votes: number;
 }
 
+// Nueva estructura para cada categoría de votación
 @Schema({ _id: false })
-export class Votes {
+export class VotingCategory {
   @Prop({ required: true, min: 0 })
   validVotes: number;
 
@@ -54,14 +55,21 @@ export class Votes {
   @Prop({ required: true, min: 0 })
   blankVotes: number;
 
-  @Prop({ min: 0 })
-  totalVotes?: number; // Calculado
-
   @Prop({ type: [PartyVote], required: true })
   partyVotes: PartyVote[];
 
-  @Prop({ type: [PartyVote], required: true })
-  diputiesVotes: PartyVote[];
+  @Prop({ min: 0 })
+  totalVotes?: number; // Calculado automáticamente
+}
+
+// Nueva estructura completa de votos
+@Schema({ _id: false })
+export class Votes {
+  @Prop({ type: VotingCategory, required: true })
+  parties: VotingCategory; // Votación para presidentes
+
+  @Prop({ type: VotingCategory, required: true })
+  deputies: VotingCategory; // Votación para diputados
 }
 
 @Schema({ _id: false })
@@ -106,6 +114,13 @@ export class Ballot {
   @Prop({ required: false, trim: true })
   ipfsCid?: string;
 
+  // Campos agregados en el cambio anterior
+  @Prop({ required: true, trim: true })
+  recordId: string;
+
+  @Prop({ required: true, trim: true })
+  tableIdIpfs: string;
+
   @Prop({
     default: 'pending',
     enum: ['pending', 'processed', 'synced', 'error'],
@@ -118,7 +133,6 @@ export class Ballot {
 
 export const BallotSchema = SchemaFactory.createForClass(Ballot);
 
-// Índices
 BallotSchema.index({ tableCode: 1 }, { unique: true });
 BallotSchema.index({ electoralLocationId: 1 });
 BallotSchema.index({ status: 1 });
@@ -128,12 +142,27 @@ BallotSchema.index({ 'location.municipality': 1 });
 BallotSchema.index({ 'location.circunscripcion.type': 1 });
 BallotSchema.index({ 'blockchain.transactionHash': 1 });
 BallotSchema.index({ ipfsCid: 1 });
+BallotSchema.index({ recordId: 1 });
+BallotSchema.index({ tableIdIpfs: 1 });
 
-// Middleware para calcular totalVotes antes de guardar
+// Middleware para calcular totalVotes en ambas categorías
 BallotSchema.pre('save', function (next) {
   if (this.votes) {
-    this.votes.totalVotes =
-      this.votes.validVotes + this.votes.nullVotes + this.votes.blankVotes;
+    // Calcular totalVotes para presidentes
+    if (this.votes.parties) {
+      this.votes.parties.totalVotes =
+        this.votes.parties.validVotes +
+        this.votes.parties.nullVotes +
+        this.votes.parties.blankVotes;
+    }
+
+    // Calcular totalVotes para diputados
+    if (this.votes.deputies) {
+      this.votes.deputies.totalVotes =
+        this.votes.deputies.validVotes +
+        this.votes.deputies.nullVotes +
+        this.votes.deputies.blankVotes;
+    }
   }
   next();
 });

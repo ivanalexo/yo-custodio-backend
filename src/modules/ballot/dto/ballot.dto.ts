@@ -16,6 +16,20 @@ export class CreateBallotFromIpfsDto {
   @IsUrl()
   @IsNotEmpty()
   ipfsUri: string;
+
+  @ApiProperty({
+    description: 'ID del NFT en IPFS',
+  })
+  @IsString()
+  @IsNotEmpty()
+  recordId: string;
+
+  @ApiProperty({
+    description: 'ID de la mesa en IPFS',
+  })
+  @IsString()
+  @IsNotEmpty()
+  tableIdIpfs: string;
 }
 
 // Interfaces para el formato OpenSea
@@ -26,21 +40,6 @@ export interface OpenSeaAttribute {
   data?: any;
 }
 
-export interface BallotDataFromIpfs {
-  tableCode: string;
-  tableNumber: string;
-  locationId: string;
-  votes: {
-    validVotes: number;
-    nullVotes: number;
-    blankVotes: number;
-    partyVotes: Array<{
-      partyId: string;
-      votes: number;
-    }>;
-  };
-}
-
 export interface OpenSeaMetadata {
   name: string;
   description: string;
@@ -48,7 +47,35 @@ export interface OpenSeaMetadata {
   attributes: Array<OpenSeaAttribute>;
 }
 
-// DTOs para queries
+// Interface para los votos por partido
+export interface PartyVoteData {
+  partyId: string;
+  votes: number;
+}
+
+// Interface para cada categoría de votación
+export interface VotingCategoryData {
+  validVotes: number;
+  nullVotes: number;
+  blankVotes: number;
+  partyVotes: PartyVoteData[];
+  totalVotes?: number; // Calculado
+}
+
+// Interface actualizada para la estructura completa de votos desde IPFS
+export interface VotesDataFromIpfs {
+  parties: VotingCategoryData; // Votos para presidentes
+  deputies: VotingCategoryData; // Votos para diputados
+}
+
+// Interface principal actualizada para los datos del ballot desde IPFS
+export interface BallotDataFromIpfs {
+  tableCode: string;
+  tableNumber: string;
+  locationId: string;
+  votes: VotesDataFromIpfs;
+}
+
 export class BallotQueryDto {
   @ApiProperty({
     description: 'Filtrar por estado',
@@ -114,7 +141,6 @@ export class BallotQueryDto {
   limit?: number;
 }
 
-// Response DTOs
 export class BallotStatsDto {
   totalTables: number;
   processedTables: number;
@@ -122,11 +148,6 @@ export class BallotStatsDto {
   syncedTables: number;
   errorTables: number;
   completionPercentage: number;
-}
-
-export class BallotValidationErrorDto {
-  field: string;
-  message: string;
 }
 
 // Geolocation DTOs

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsEnum, IsNumber } from 'class-validator';
 
@@ -181,6 +182,9 @@ export class CircunscripcionResultDto {
 }
 
 export class CircunscripcionResponseDto {
+  @ApiProperty({ type: CircunscripcionFilterDto })
+  filters: any;
+
   @ApiProperty({ type: [CircunscripcionResultDto] })
   circunscripciones: CircunscripcionResultDto[];
 
