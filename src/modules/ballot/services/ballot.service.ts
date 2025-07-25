@@ -18,6 +18,7 @@ import {
   BallotStatsDto,
   OpenSeaMetadata,
   BallotDataFromIpfs,
+  VotingCategoryData,
 } from '../dto/ballot.dto';
 import { ElectoralLocationService } from '../../geographic/services/electoral-location.service';
 import { ElectoralTableService } from '../../geographic/services/electoral-table.service';
@@ -61,6 +62,8 @@ export class BallotService {
         votes: ballotData.votes,
         ipfsUri: createDto.ipfsUri,
         ipfsCid: cid,
+        recordId: createDto.recordId,
+        tableIdIpfs: createDto.tableIdIpfs,
         status: 'processed',
       });
 
@@ -96,7 +99,36 @@ export class BallotService {
       );
     }
 
-    return dataAttribute.data as BallotDataFromIpfs;
+    const rawData = dataAttribute.data;
+
+    // Mapear la estructura de datos desde IPFS al formato esperado
+    const ballotData: BallotDataFromIpfs = {
+      tableCode: rawData.tableCode,
+      tableNumber: rawData.tableNumber,
+      locationId: rawData.locationId,
+      votes: {
+        parties: {
+          validVotes: rawData.votes.parties.validVotes,
+          nullVotes: rawData.votes.parties.nullVotes,
+          blankVotes: rawData.votes.parties.blankVotes,
+          partyVotes: rawData.votes.parties.partyVotes.map((pv: any) => ({
+            partyId: pv.partyId,
+            votes: pv.votes,
+          })),
+        },
+        deputies: {
+          validVotes: rawData.votes.deputies.validVotes,
+          nullVotes: rawData.votes.deputies.nullVotes,
+          blankVotes: rawData.votes.deputies.blankVotes,
+          partyVotes: rawData.votes.deputies.partyVotes.map((pv: any) => ({
+            partyId: pv.partyId,
+            votes: pv.votes,
+          })),
+        },
+      },
+    };
+
+    return ballotData;
   }
 
   private async validateBallotData(data: BallotDataFromIpfs): Promise<void> {
@@ -104,55 +136,49 @@ export class BallotService {
 
     // Validar estructura básica
     if (!data.tableCode || !data.tableNumber || !data.locationId) {
-      errors.push('Datos de mesa incompletos');
+      errors.push('Faltan campos básicos: tableCode, tableNumber o locationId');
     }
 
-    if (!data.votes || typeof data.votes !== 'object') {
-      errors.push('Datos de votación faltantes');
-    }
-
-    // Validar que existe la mesa electoral
-    try {
-      const table = await this.electoralTableService.findByTableCode(
-        data.tableCode,
-      );
-      if (!table) {
-        errors.push('Código de mesa no existe');
-      }
-    } catch {
-      errors.push('Código de mesa inválido');
-    }
-
-    // Validar partidos políticos
-    if (data.votes && data.votes.partyVotes) {
-      const partyIds = data.votes.partyVotes.map((pv) => pv.partyId);
-      const validParties =
-        await this.politicalPartyService.validatePartyIds(partyIds);
-      if (!validParties) {
-        errors.push('Algunos partidos políticos no son válidos');
-      }
-    }
-
-    // Validar suma de votos
-    if (data.votes) {
-      const sumPartyVotes = data.votes.partyVotes.reduce(
-        (sum, pv) => sum + pv.votes,
-        0,
-      );
-      if (sumPartyVotes !== data.votes.validVotes) {
-        errors.push(
-          'La suma de votos por partido no coincide con votos válidos',
+    // Validar estructura de votos
+    if (!data.votes) {
+      errors.push('Estructura de votos faltante');
+    } else {
+      // Validar votos de presidentes
+      if (!data.votes.parties) {
+        errors.push('Sección de votos para presidentes faltante');
+      } else {
+        const partiesErrors = this.validateVotingCategory(
+          data.votes.parties,
+          'presidentes',
         );
+        errors.push(...partiesErrors);
       }
 
-      // Validar que todos los votos sean no negativos
-      if (
-        data.votes.validVotes < 0 ||
-        data.votes.nullVotes < 0 ||
-        data.votes.blankVotes < 0
-      ) {
-        errors.push('Los votos no pueden ser negativos');
+      // Validar votos de diputados
+      if (!data.votes.deputies) {
+        errors.push('Sección de votos para diputados faltante');
+      } else {
+        const deputiesErrors = this.validateVotingCategory(
+          data.votes.deputies,
+          'diputados',
+        );
+        errors.push(...deputiesErrors);
       }
+    }
+
+    // Validar que el recinto electoral existe
+    try {
+      await this.electoralLocationService.findOne(data.locationId);
+    } catch (error) {
+      errors.push('El recinto electoral especificado no existe');
+    }
+
+    // Validar que no exista un acta para esta mesa
+    const existingBallot = await this.ballotModel.findOne({
+      tableCode: data.tableCode,
+    });
+    if (existingBallot) {
+      errors.push('Ya existe un acta registrada para esta mesa');
     }
 
     if (errors.length > 0) {
@@ -160,6 +186,57 @@ export class BallotService {
         `Errores de validación: ${errors.join(', ')}`,
       );
     }
+  }
+
+  private validateVotingCategory(
+    category: VotingCategoryData,
+    categoryName: string,
+  ): string[] {
+    const errors: string[] = [];
+
+    // Validar campos numéricos
+    if (typeof category.validVotes !== 'number' || category.validVotes < 0) {
+      errors.push(`Votos válidos inválidos en ${categoryName}`);
+    }
+
+    if (typeof category.nullVotes !== 'number' || category.nullVotes < 0) {
+      errors.push(`Votos nulos inválidos en ${categoryName}`);
+    }
+
+    if (typeof category.blankVotes !== 'number' || category.blankVotes < 0) {
+      errors.push(`Votos en blanco inválidos en ${categoryName}`);
+    }
+
+    // Validar votos por partido
+    if (!Array.isArray(category.partyVotes)) {
+      errors.push(`Lista de votos por partido inválida en ${categoryName}`);
+    } else {
+      category.partyVotes.forEach((partyVote, index) => {
+        if (!partyVote.partyId || typeof partyVote.partyId !== 'string') {
+          errors.push(
+            `ID de partido inválido en ${categoryName}, posición ${index}`,
+          );
+        }
+        if (typeof partyVote.votes !== 'number' || partyVote.votes < 0) {
+          errors.push(
+            `Votos de partido inválidos en ${categoryName}, posición ${index}`,
+          );
+        }
+      });
+    }
+
+    // Validar consistencia de datos
+    const totalPartyVotes = category.partyVotes.reduce(
+      (sum, pv) => sum + pv.votes,
+      0,
+    );
+    if (totalPartyVotes !== category.validVotes) {
+      errors.push(
+        `La suma de votos por partido (${totalPartyVotes}) no coincide con votos válidos (${category.validVotes}) en ${categoryName}`,
+      );
+    }
+
+    return errors;
   }
 
   private async getLocationDetails(locationId: string): Promise<any> {
