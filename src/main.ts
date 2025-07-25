@@ -35,7 +35,7 @@ async function bootstrap() {
     .addTag('Geografía', 'Jerarquía geográfica electoral')
     .addTag('Partidos', 'Partidos políticos')
     .addTag('Actas', 'Actas electorales y resultados')
-    .addTag('Blockchain', 'Sincronización con smart contracts')
+    .addTag('Resultados', 'Estadísticas y resultados electorales')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

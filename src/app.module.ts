@@ -5,9 +5,16 @@ import { CoreModule } from './core/core.module';
 import { GeographicModule } from './modules/geographic/geographic.module';
 import { PoliticalModule } from './modules/political/political.module';
 import { BallotModule } from './modules/ballot/ballot.module';
+import { ResultsModule } from './modules/results/results.module';
 
 @Module({
-  imports: [CoreModule, GeographicModule, PoliticalModule, BallotModule],
+  imports: [
+    CoreModule,
+    GeographicModule,
+    PoliticalModule,
+    BallotModule,
+    ResultsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
