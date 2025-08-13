@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-catch */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
@@ -36,24 +37,20 @@ export class BallotService {
 
   async createFromIpfs(createDto: CreateBallotFromIpfsDto): Promise<Ballot> {
     try {
-      // 1. Fetch data from IPFS
       const ipfsData = await this.fetchFromIpfs(createDto.ipfsUri);
 
-      // 2. Extract ballot data from OpenSea format
       const ballotData = this.extractBallotData(ipfsData);
 
-      // 3. Validate data
       await this.validateBallotData(ballotData);
 
-      // 4. Get location details
       const locationDetails = await this.getLocationDetails(
         ballotData.locationId,
       );
 
-      // 5. Extract CID from URI
       const cid = this.extractCidFromUri(createDto.ipfsUri);
 
-      // 6. Create ballot document
+      const version = createDto.version || 1;
+
       const ballot = new this.ballotModel({
         tableNumber: ballotData.tableNumber,
         tableCode: ballotData.tableCode,
@@ -66,13 +63,11 @@ export class BallotService {
         recordId: createDto.recordId,
         tableIdIpfs: createDto.tableIdIpfs,
         status: 'processed',
+        version,
       });
 
       return await ballot.save();
     } catch (error) {
-      if (error.code === 11000) {
-        throw new ConflictException('El acta ya fue registrada para esta mesa');
-      }
       throw error;
     }
   }
@@ -176,14 +171,6 @@ export class BallotService {
       errors.push('El recinto electoral especificado no existe');
     }
 
-    // Validar que no exista un acta para esta mesa
-    const existingBallot = await this.ballotModel.findOne({
-      tableCode: data.tableCode,
-    });
-    if (existingBallot) {
-      errors.push('Ya existe un acta registrada para esta mesa');
-    }
-
     if (errors.length > 0) {
       throw new BadRequestException(
         `Errores de validación: ${errors.join(', ')}`,
@@ -240,6 +227,17 @@ export class BallotService {
     }
 
     return errors;
+  }
+
+  /**
+   * Obtener todas las versiones de un acta por tableCode
+   */
+  async findVersionsByTableCode(tableCode: string): Promise<BallotDocument[]> {
+    return this.ballotModel
+      .find({ tableCode })
+      .sort({ version: -1, createdAt: -1 })
+      .populate('electoralLocationId', 'name code address')
+      .exec();
   }
 
   private async getLocationDetails(locationId: string): Promise<any> {
